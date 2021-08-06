@@ -1,4 +1,4 @@
-# Image-Inpainting-Project-based-on-CVPR-2020-Oral-Paper-on-HiFill---Tensorflow-2.5-pretrained-model
+# Image-Inpainting-Project-based-on-CVPR-2020-Oral-Paper-on-HiFill--Tensorflow-2.5-version
 
 
 The original repo is [here](https://github.com/Atlas200dk/sample-imageinpainting-HiFill) with tensorflow 1x code. 
