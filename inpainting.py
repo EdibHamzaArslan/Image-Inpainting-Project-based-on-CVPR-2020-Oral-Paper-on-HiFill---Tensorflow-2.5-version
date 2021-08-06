@@ -98,10 +98,10 @@ def wrap_frozen_graph(graph_def, inputs, outputs):
       tf.nest.map_structure(import_graph.as_graph_element, inputs),
       tf.nest.map_structure(import_graph.as_graph_element, outputs))
 
-def tf1_tf2():
-  path = "/content/sample-imageinpainting-HiFill/GPU_CPU/pb/hifill.pb"
+def tf1_tf2(model_path):
+  # path = "/content/sample-imageinpainting-HiFill/GPU_CPU/pb/hifill.pb"
   graph_def = tf.compat.v1.GraphDef()
-  loaded = graph_def.ParseFromString(open(path,'rb').read())
+  loaded = graph_def.ParseFromString(open(model_path,'rb').read())
   inception_func = wrap_frozen_graph(
     graph_def, inputs=['img:0', 'mask:0'],
     outputs=['inpainted:0', 'attention:0', 'mask_processed:0'])
@@ -109,7 +109,8 @@ def tf1_tf2():
 
 def inpaint(raw_img, 
             raw_mask, 
-            multiple):
+            multiple,
+            model_path):
 
     # pre-processing
     
@@ -136,9 +137,9 @@ def inpaint(raw_img,
     print(f"mask_512 {mask_512.shape}")
 
     # neural network
-    inception_func = tf1_tf2()
+    HiFill_model = tf1_tf2(model_path)
     # print(mask_512.shape)
-    inpainted_512, attention, mask_512 = inception_func(img_512, mask_512)
+    inpainted_512, attention, mask_512 = HiFill_model(img_512, mask_512)
 
     inpainted_512 = np.array(inpainted_512)
     attention = np.array(attention)
@@ -161,9 +162,9 @@ def inpaint(raw_img,
 
 
 
-def read_imgs_masks(args):
-    paths_img = glob.glob(args.images+'/*.*[gG]')
-    paths_mask = glob.glob(args.masks+'/*.*[gG]')
+def read_imgs_masks(images, marks):
+    paths_img = glob.glob(images + '/*.*[gG]')
+    paths_mask = glob.glob(marks + '/*.*[gG]')
     paths_img = sort(paths_img)
     paths_mask = sort(paths_mask)
     print('#imgs: ' + str(len(paths_img)))
@@ -175,26 +176,34 @@ def read_imgs_masks(args):
 
 
 
-parser = argparse.ArgumentParser()
-args = parser.parse_args()
-args.images = '../samples/testset' # input image directory
-args.masks = '../samples/maskset' # input mask director
-args.output_dir = 'results' # output directory
-args.multiple = 6 # multiples of image resizing 
+ap = argparse.ArgumentParser()
 
-paths_img, paths_mask = '/content/sample-imageinpainting-HiFill/samples/testset/21.jpg' , '/content/sample-imageinpainting-HiFill/samples/maskset/21.jpg'
-print(paths_img)
-print(paths_mask)
-if not os.path.exists(args.output_dir):
-    os.makedirs(args.output_dir)
+# args.images = '../samples/testset' # input image directory
+# args.masks = '../samples/maskset' # input mask director
+# args.output_dir = 'results' # output directory
 
+ap.add_argument("-i", "--images", type=str, required=True,
+                help="path input image on which we'll perform inpainting")
+ap.add_argument("-m", "--masks", type=str, required=True,
+                help="path input mask which corresponds to damaged areas")
+ap.add_argument("-M", "--model", type=str, required=True,
+                help="pretrained model path")                
+ap.add_argument("-r", "--results", type=str, required=True,
+                help="path the inpainted img dir path")
+args = vars(ap.parse_args())
 
-# for path_img, path_mask in zip(paths_img, paths_mask):
-#     print(path_img)
-raw_img = cv2.imread(paths_img)
-raw_mask = cv2.imread(paths_mask)
-inpainted = inpaint(raw_img, raw_mask, args.multiple)
-filename = args.output_dir + '/' + os.path.basename(paths_img)
-cv2.imwrite(filename + '_inpainted.jpg', inpainted)
+multiple = 6 # multiples of image resizing 
+
+paths_img, paths_mask = read_imgs_masks(args["images"], args["masks"])
+
+if not os.path.exists(args["results"]):
+    os.makedirs(args["results"])
+
+for path_img, path_mask in zip(paths_img, paths_mask):
+  raw_img = cv2.imread(path_img)
+  raw_mask = cv2.imread(path_mask)
+  inpainted = inpaint(raw_img, raw_mask, multiple, args["model"])
+  filename = args["results"] + '/' + os.path.basename(path_img)
+  cv2.imwrite(filename + '_inpainted.jpg', inpainted)
 
 
