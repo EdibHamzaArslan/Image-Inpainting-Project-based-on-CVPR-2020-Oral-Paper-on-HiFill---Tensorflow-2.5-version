@@ -5,6 +5,7 @@ import glob
 import argparse
 import os
 
+# if you have tf 2.2.0 version, you can delete 9. and 10. lines, I tested on my local env.
 from tensorflow.python.ops.numpy_ops import np_config
 np_config.enable_numpy_behavior()
 
